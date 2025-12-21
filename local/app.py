@@ -10,14 +10,20 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import silhouette_score
-from sklearn.metrics import silhouette_samples
+from sklearn.metrics import silhouette_score, silhouette_samples
 
-dataset = pd.read_csv("local/electric_vehicles_spec_2025.csv.csv")
 
-#-----------------------------------------------#
-### Dataset Description and Feature Selection ###
-#-----------------------------------------------#
+# =========================
+# Load dataset
+# =========================
+dataset = pd.read_csv(
+    "/content/electric-vehicle-specifications-dataset-2025/electric_vehicles_spec_2025.csv.csv"
+)
+
+
+# =========================
+# Define feature sets
+# =========================
 numeric_features = [
     "top_speed_kmh",
     "battery_capacity_kWh",
@@ -31,88 +37,64 @@ numeric_features = [
     "seats",
     "length_mm",
     "width_mm",
-    "height_mm"
+    "height_mm",
 ]
 
 categorical_features = [
     "battery_type",
     "fast_charge_port",
-    "drivetrain"
+    "drivetrain",
 ]
 
-# brand, model, segment, car_body_type, source_url feature'ları modele dahil edilemez.
+# Not: brand, model, segment, car_body_type, source_url gibi alanlar modele dahil edilmedi.
 
 
+# =========================
+# Coerce numeric columns (dirty strings -> NaN)
+# =========================
 for col in numeric_features:
     if col in dataset.columns:
-        dataset[col] = pd.to_numeric(dataset[col], errors="coerce") # errors="coerce" ile kirli veriyi NaN’a çevirme
+        dataset[col] = pd.to_numeric(dataset[col], errors="coerce")
 
+
+# =========================
+# Build X (features) and y (proxy target for supervised feature selection)
+# =========================
 X = dataset[numeric_features + categorical_features]
-y = dataset["range_km"]
+y = dataset["range_km"]  # ElasticNet feature selection için proxy target
 
-#-----------------------------#
-### Preprocessing Pipelines ###
-#-----------------------------#
 
+# =========================
+# Define preprocessing (impute + scale / impute + onehot)
+# =========================
 numeric_transformer = Pipeline(steps=[
     ("imputer", SimpleImputer(strategy="median")),
-    ("scaler", StandardScaler())
+    ("scaler", StandardScaler()),
 ])
 
 categorical_transformer = Pipeline(steps=[
     ("imputer", SimpleImputer(strategy="most_frequent")),
-    ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
+    ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
 ])
 
 preprocessor = ColumnTransformer(
     transformers=[
         ("num", numeric_transformer, numeric_features),
-        ("cat", categorical_transformer, categorical_features)
+        ("cat", categorical_transformer, categorical_features),
     ]
 )
 
-# ELASTICNET + FEATURE SELECTION
 
+# =========================
+# Define ElasticNet-based feature selection (supervised)
+# =========================
 elastic_net = ElasticNet(
     alpha=0.01,
     l1_ratio=0.5,
-    random_state=42
+    random_state=42,
 )
 
 feature_selector = SelectFromModel(
     estimator=elastic_net,
-    threshold="median"
+    threshold="median",
 )
-
-# aşağıdakiler düzeltilmeli
-# range_km’yi proxy target olarak kullanma
-# Menzili açıklamayan feature’lar segmentasyonda da zayıftır varsayımı
-
-#------------------#
-### PCA + KMEANS ###         
-#------------------#
-
-pca = PCA(
-    n_components=0.80,
-    random_state=42
-)
-
-kmeans = KMeans(
-    n_clusters=4,
-    random_state=42,
-    n_init=10
-)
-
-# Pipelines
-segmentation_pipeline = Pipeline(steps=[
-    ("preprocessing", preprocessor),
-    ("feature_selection", feature_selector),
-    ("pca", pca),
-    ("kmeans", kmeans)
-])
-
-analysis_pipeline = Pipeline(steps=[
-    ("preprocessing", preprocessor),
-    ("feature_selection", feature_selector),
-    ("pca", pca)
-])
