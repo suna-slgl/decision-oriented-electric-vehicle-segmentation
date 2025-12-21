@@ -71,6 +71,23 @@ preprocessor = ColumnTransformer(
     ]
 )
 
+# ELASTICNET + FEATURE SELECTION
+
+elastic_net = ElasticNet(
+    alpha=0.01,
+    l1_ratio=0.5,
+    random_state=42
+)
+
+feature_selector = SelectFromModel(
+    estimator=elastic_net,
+    threshold="median"
+)
+
+# aşağıdakiler düzeltilmeli
+# range_km’yi proxy target olarak kullanma
+# Menzili açıklamayan feature’lar segmentasyonda da zayıftır varsayımı
+
 #------------------#
 ### PCA + KMEANS ###         
 #------------------#
@@ -85,3 +102,17 @@ kmeans = KMeans(
     random_state=42,
     n_init=10
 )
+
+# Pipelines
+segmentation_pipeline = Pipeline(steps=[
+    ("preprocessing", preprocessor),
+    ("feature_selection", feature_selector),
+    ("pca", pca),
+    ("kmeans", kmeans)
+])
+
+analysis_pipeline = Pipeline(steps=[
+    ("preprocessing", preprocessor),
+    ("feature_selection", feature_selector),
+    ("pca", pca)
+])
