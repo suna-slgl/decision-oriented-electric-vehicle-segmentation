@@ -16,9 +16,8 @@ from sklearn.metrics import silhouette_score, silhouette_samples
 # =========================
 # Load dataset
 # =========================
-dataset = pd.read_csv(
-    "/content/electric-vehicle-specifications-dataset-2025/electric_vehicles_spec_2025.csv.csv"
-)
+dataset = pd.read_csv("electric_vehicles_spec_2025.csv.csv")
+
 
 
 # =========================
@@ -46,7 +45,7 @@ categorical_features = [
     "drivetrain",
 ]
 
-# Not: brand, model, segment, car_body_type, source_url gibi alanlar modele dahil edilmedi.
+# brand, model, segment, car_body_type, source_url gibi alanlar modele dahil edilmedi.
 
 
 # =========================
@@ -175,7 +174,7 @@ segment_names = {
 # =========================
 # Silhouette analysis (segment reliability matrix)
 # =========================
-# Not: Burada aynı dönüşüm zinciriyle PCA uzayı üretilir.
+# Burada aynı dönüşüm zinciriyle PCA uzayı üretilir.
 X_pca = analysis_pipeline.fit_transform(X, y)
 
 # Etiketleri segmentation pipeline içindeki KMeans'ten alıyoruz (gerçek segment etiketleri)
