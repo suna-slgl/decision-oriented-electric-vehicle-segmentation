@@ -98,3 +98,101 @@ feature_selector = SelectFromModel(
     estimator=elastic_net,
     threshold="median",
 )
+
+# =========================
+# Define PCA + KMeans
+# =========================
+pca = PCA(
+    n_components=0.80,
+    random_state=42,
+)
+
+kmeans = KMeans(
+    n_clusters=4,
+    random_state=42,
+    n_init=10,
+)
+
+# =========================
+# Build pipelines (training vs analysis)
+# =========================
+# Segmentasyon pipeline'ı: preprocess -> feature selection -> pca -> kmeans
+segmentation_pipeline = Pipeline(steps=[
+    ("preprocessing", preprocessor),
+    ("feature_selection", feature_selector),
+    ("pca", pca),
+    ("kmeans", kmeans),
+])
+
+# Analiz pipeline'ı: kmeans yok (PCA uzayı üretmek için)
+analysis_pipeline = Pipeline(steps=[
+    ("preprocessing", preprocessor),
+    ("feature_selection", feature_selector),
+    ("pca", pca),
+])
+
+# =========================
+# Fit segmentation pipeline and assign cluster labels to dataset
+# =========================
+segmentation_pipeline.fit(X, y)
+dataset["ev_segments"] = segmentation_pipeline.predict(X)
+
+segment_counts = dataset["ev_segments"].value_counts()
+segment_percent = (dataset["ev_segments"].value_counts(normalize=True) * 100).round(2)
+
+print("Segment counts:\n", segment_counts)
+print("\nSegment percentages (%):\n", segment_percent)
+
+
+# =========================
+# Compute segment profiles (interpretable summary statistics)
+# =========================
+profile_cols = [
+    "range_km",
+    "battery_capacity_kWh",
+    "top_speed_kmh",
+    "torque_nm",
+    "efficiency_wh_per_km",
+    "acceleration_0_100_s",
+    "length_mm",
+]
+
+segment_profiles = dataset.groupby("ev_segments")[profile_cols].mean().round(2)
+print("\nSegment profiles (mean):\n", segment_profiles)
+
+
+# =========================
+# Human-readable segment names (business labels)
+# =========================
+segment_names = {
+    0: "Premium / Yüksek Performanslı Elektrikli Araçlar",
+    1: "Ana Akım / Dengeli Elektrikli Araçlar",
+    2: "Fayda Odaklı / Düşük Performanslı Elektrikli Araçlar",
+    3: "Şehir İçi / Ekonomik Elektrikli Araçlar",
+}
+
+
+# =========================
+# Silhouette analysis (segment reliability matrix)
+# =========================
+# Not: Burada aynı dönüşüm zinciriyle PCA uzayı üretilir.
+X_pca = analysis_pipeline.fit_transform(X, y)
+
+# Etiketleri segmentation pipeline içindeki KMeans'ten alıyoruz (gerçek segment etiketleri)
+labels = segmentation_pipeline.named_steps["kmeans"].labels_
+
+silhouette_values = silhouette_samples(X_pca, labels)
+
+silhouette_df = pd.DataFrame({
+    "ev_segment": labels,
+    "silhouette_skoru": silhouette_values,
+})
+
+silhouette_matrix = silhouette_df.groupby("ev_segment").agg(
+    ortalama_silhouette=("silhouette_skoru", "mean"),
+    minimum_silhouette=("silhouette_skoru", "min"),
+    maksimum_silhouette=("silhouette_skoru", "max"),
+    gozlem_sayisi=("silhouette_skoru", "count"),
+).round(3)
+
+print("\nSilhouette matrix:\n", silhouette_matrix)
