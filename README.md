@@ -67,15 +67,6 @@ Sistem, bütünleşik ve tekrarlanabilir bir makine öğrenimi boru hattı (ML p
 
 ---
 
-## Akademik/Endüstriyel Katkı ve Kullanım Alanları
-
-- Elektrikli otomotiv pazarında ürün stratejisi ve pazar segmentasyonu çalışmaları
-- Çoklu kriterli karar verme (MCDM) ve optimizasyon yaklaşımlarına teknik veri tabanı sağlama
-- Veri bilimi ile pazarlama, Ar-Ge ve mühendislik ekipleri arasında köprü kurma
-- Alternatif segmentasyon mimarilerinin validasyonu ve karşılaştırılması
-
----
-
 ## Kurulum
 
 ```bash
